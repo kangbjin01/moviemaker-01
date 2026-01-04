@@ -154,6 +154,22 @@ function CallSheetPDFDocument({ callSheet, project }: CallSheetPDFProps) {
   const totalHours = Math.floor(totalShootingMinutes / 60);
   const totalMinutes = totalShootingMinutes % 60;
 
+  // 촬영 종료 시간 계산 (마지막 씬의 끝 시간)
+  let shootingEndTime = "-";
+  if (callSheet.scenes && callSheet.scenes.length > 0) {
+    // 씬 중 가장 늦은 끝 시간 찾기
+    let latestEndTime = "";
+    for (const scene of callSheet.scenes) {
+      const endTime = calculateEndTime(scene.startTime, scene.estimatedTime);
+      if (endTime && endTime > latestEndTime) {
+        latestEndTime = endTime;
+      }
+    }
+    if (latestEndTime) {
+      shootingEndTime = latestEndTime;
+    }
+  }
+
   // 전체 일정, 스태프, 캐스트 데이터 존재 여부
   const hasSchedules = callSheet.schedules && callSheet.schedules.length > 0;
   const hasStaff = callSheet.staffList && callSheet.staffList.length > 0;
@@ -180,22 +196,16 @@ function CallSheetPDFDocument({ callSheet, project }: CallSheetPDFProps) {
 
         {/* 기본 정보 테이블 */}
         <View style={[styles.infoTable, { border: "1px solid #333" }]}>
-          {/* 첫 번째 행 */}
+          {/* 1행: 촬영일시, 날씨, 기온, 강수확률 */}
           <View style={styles.infoRow}>
             <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
               <Text style={{ textAlign: "center" }}>{callSheet.shootingDay}회차</Text>
             </View>
-            <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
+            <View style={[styles.infoCell, styles.infoCellHeader, { width: 55 }]}>
               <Text>촬영일시</Text>
             </View>
-            <View style={[styles.infoCell, { width: 90 }]}>
+            <View style={[styles.infoCell, { width: 95 }]}>
               <Text>{dayjs(callSheet.date).format("YYYY.MM.DD (ddd)")}</Text>
-            </View>
-            <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
-              <Text>집합시간</Text>
-            </View>
-            <View style={[styles.infoCell, { width: 45 }]}>
-              <Text>{callSheet.crewCallTime || "-"}</Text>
             </View>
             <View style={[styles.infoCell, styles.infoCellHeader, { width: 35 }]}>
               <Text>날씨</Text>
@@ -203,47 +213,65 @@ function CallSheetPDFDocument({ callSheet, project }: CallSheetPDFProps) {
             <View style={[styles.infoCell, { width: 50 }]}>
               <Text>{callSheet.weather || "-"}</Text>
             </View>
-            <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
-              <Text>일출/일몰</Text>
+            <View style={[styles.infoCell, styles.infoCellHeader, { width: 35 }]}>
+              <Text>기온</Text>
             </View>
-            <View style={[styles.infoCell, { width: 70, borderRight: 0 }]}>
-              <Text>{callSheet.sunrise || "-"} / {callSheet.sunset || "-"}</Text>
+            <View style={[styles.infoCell, { width: 75 }]}>
+              <Text>{callSheet.tempMin || "-"} ~ {callSheet.tempMax || "-"}</Text>
+            </View>
+            <View style={[styles.infoCell, styles.infoCellHeader, { width: 35 }]}>
+              <Text>강수</Text>
+            </View>
+            <View style={[styles.infoCell, { width: 40, borderRight: 0 }]}>
+              <Text>{callSheet.precipitation || "-"}</Text>
             </View>
           </View>
-          {/* 두 번째 행 */}
+          {/* 2행: 집합시간, 일출/일몰, Shooting, 촬영종료 */}
           <View style={styles.infoRow}>
             <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
               <Text></Text>
             </View>
-            <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
-              <Text>촬영장소</Text>
+            <View style={[styles.infoCell, styles.infoCellHeader, { width: 55 }]}>
+              <Text>집합시간</Text>
             </View>
-            <View style={[styles.infoCell, { width: 135 }]}>
-              <Text>{callSheet.location || "-"}</Text>
+            <View style={[styles.infoCell, { width: 50 }]}>
+              <Text>{callSheet.crewCallTime || "-"}</Text>
+            </View>
+            <View style={[styles.infoCell, styles.infoCellHeader, { width: 55 }]}>
+              <Text>일출/일몰</Text>
+            </View>
+            <View style={[styles.infoCell, { width: 75 }]}>
+              <Text>{callSheet.sunrise || "-"} / {callSheet.sunset || "-"}</Text>
             </View>
             <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
               <Text>Shooting</Text>
             </View>
-            <View style={[styles.infoCell, { width: 55 }]}>
+            <View style={[styles.infoCell, { width: 50 }]}>
               <Text>{totalHours > 0 ? `${totalHours}h ` : ""}{totalMinutes}m</Text>
             </View>
-            <View style={[styles.infoCell, styles.infoCellHeader, { width: 40 }]}>
-              <Text>감독</Text>
+            <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
+              <Text>촬영종료</Text>
             </View>
-            <View style={[styles.infoCell, { width: 80, borderRight: 0 }]}>
-              <Text>{callSheet.director || "-"}</Text>
+            <View style={[styles.infoCell, { width: 35, borderRight: 0 }]}>
+              <Text>{shootingEndTime}</Text>
             </View>
           </View>
-          {/* 세 번째 행 - 집합장소 추가 */}
+          {/* 3행: 촬영장소, 감독, 프로듀서, 조연출 */}
           <View style={styles.infoRow}>
             <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
               <Text></Text>
             </View>
-            <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
-              <Text>집합장소</Text>
+            <View style={[styles.infoCell, styles.infoCellHeader, { width: 55 }]}>
+              <Text>촬영장소</Text>
             </View>
-            <View style={[styles.infoCell, { width: 135 }]}>
-              <Text>{meetingPlaceDisplay}</Text>
+            <View style={[styles.infoCell, { width: 105 }]}>
+              <Text>{callSheet.location || "-"}</Text>
+            </View>
+            <View style={[styles.infoCell, styles.infoCellHeader, { width: 35 }]}>
+              <Text>감독</Text>
+            </View>
+            <View style={[styles.infoCell, { width: 65 }]}>
+              <Text>{callSheet.director || "-"}</Text>
             </View>
             <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
               <Text>프로듀서</Text>
@@ -254,16 +282,28 @@ function CallSheetPDFDocument({ callSheet, project }: CallSheetPDFProps) {
             <View style={[styles.infoCell, styles.infoCellHeader, { width: 40 }]}>
               <Text>조연출</Text>
             </View>
-            <View style={[styles.infoCell, { width: 80, borderRight: 0 }]}>
+            <View style={[styles.infoCell, { width: 65, borderRight: 0 }]}>
               <Text>{callSheet.adName || "-"}</Text>
             </View>
           </View>
-          {/* 네 번째 행 - 주소 */}
+          {/* 4행: 집합장소 */}
+          <View style={styles.infoRow}>
+            <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
+              <Text></Text>
+            </View>
+            <View style={[styles.infoCell, styles.infoCellHeader, { width: 55 }]}>
+              <Text>집합장소</Text>
+            </View>
+            <View style={[styles.infoCell, { flex: 1, borderRight: 0 }]}>
+              <Text>{meetingPlaceDisplay}</Text>
+            </View>
+          </View>
+          {/* 5행: 주소 */}
           <View style={[styles.infoRow, { borderBottom: 0 }]}>
             <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
               <Text></Text>
             </View>
-            <View style={[styles.infoCell, styles.infoCellHeader, { width: 50 }]}>
+            <View style={[styles.infoCell, styles.infoCellHeader, { width: 55 }]}>
               <Text>주소</Text>
             </View>
             <View style={[styles.infoCell, { flex: 1, borderRight: 0 }]}>

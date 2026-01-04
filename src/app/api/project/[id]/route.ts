@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
+import { getServerAuthSession } from "~/server/auth";
 
 // GET: 단일 프로젝트 조회
 export async function GET(
@@ -7,6 +8,15 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerAuthSession();
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "로그인이 필요합니다" },
+        { status: 401 }
+      );
+    }
+
     const project = await db.project.findUnique({
       where: { id: params.id },
       include: {
@@ -28,6 +38,14 @@ export async function GET(
       );
     }
 
+    // 본인 프로젝트인지 확인
+    if (project.userId && project.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "접근 권한이 없습니다" },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json(project);
   } catch (error) {
     console.error("Failed to fetch project:", error);
@@ -44,6 +62,35 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerAuthSession();
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "로그인이 필요합니다" },
+        { status: 401 }
+      );
+    }
+
+    // 프로젝트 소유권 확인
+    const existingProject = await db.project.findUnique({
+      where: { id: params.id },
+      select: { userId: true },
+    });
+
+    if (!existingProject) {
+      return NextResponse.json(
+        { error: "프로젝트를 찾을 수 없습니다" },
+        { status: 404 }
+      );
+    }
+
+    if (existingProject.userId && existingProject.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "수정 권한이 없습니다" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
 
     const project = await db.project.update({
@@ -77,6 +124,35 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerAuthSession();
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "로그인이 필요합니다" },
+        { status: 401 }
+      );
+    }
+
+    // 프로젝트 소유권 확인
+    const existingProject = await db.project.findUnique({
+      where: { id: params.id },
+      select: { userId: true },
+    });
+
+    if (!existingProject) {
+      return NextResponse.json(
+        { error: "프로젝트를 찾을 수 없습니다" },
+        { status: 404 }
+      );
+    }
+
+    if (existingProject.userId && existingProject.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "삭제 권한이 없습니다" },
+        { status: 403 }
+      );
+    }
+
     await db.project.delete({
       where: { id: params.id },
     });
@@ -90,4 +166,3 @@ export async function DELETE(
     );
   }
 }
-

@@ -35,15 +35,15 @@ export default function Home() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/call-sheet">
+              <Link href="/projects">
                 <Button size="lg" className="w-full sm:w-auto text-base">
-                  일촬표 작성 시작
+                  시작하기
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/call-sheet">
+              <Link href="/login">
                 <Button size="lg" variant="outline" className="w-full sm:w-auto text-base">
-                  둘러보기
+                  로그인
                 </Button>
               </Link>
             </div>
@@ -147,11 +147,11 @@ export default function Home() {
               지금 바로 시작하세요
             </h2>
             <p className="text-muted-foreground text-lg mb-10">
-              복잡한 가입 절차 없이 바로 일촬표를 작성할 수 있습니다.
+              무료로 회원가입하고 프로젝트를 관리하세요.
             </p>
-            <Link href="/call-sheet/create">
+            <Link href="/register">
               <Button size="lg" className="text-base">
-                새 일촬표 만들기
+                무료로 시작하기
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>

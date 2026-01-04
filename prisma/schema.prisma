@@ -46,6 +46,7 @@ model User {
     email                    String?                    @unique
     emailVerified            DateTime?
     image                    String?
+    password                 String?                    // 이메일/비밀번호 로그인용 (bcrypt 해시)
     role                     String                     @default("USER")
     accounts                 Account[]
     sessions                 Session[]
@@ -248,6 +249,9 @@ model DailyCallSheet {
     
     // 날씨/시간 정보
     weather       String?          // 날씨 예보
+    tempMin       String?          // 최저기온
+    tempMax       String?          // 최고기온
+    precipitation String?          // 강수확률
     sunrise       String?          // 일출 시간
     sunset        String?          // 일몰 시간
     

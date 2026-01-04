@@ -5,16 +5,13 @@ import {
   type NextAuthOptions,
 } from "next-auth";
 import { type Adapter } from "next-auth/adapters";
-import DiscordProvider from "next-auth/providers/discord";
+import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import * as Sentry from "@sentry/nextjs";
+import bcrypt from "bcryptjs";
 
 import { env } from "~/env.mjs";
 import { db } from "~/server/db";
-import { loops } from "~/lib/loops";
-import { isTriggerEnabled } from "~/lib/trigger";
-import { slackNewUserNotification } from "~/jobs";
-import { type Role } from "@prisma/client";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -26,16 +23,20 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
-      planId: string | null;
-      role: Role;
-      // role: UserRole;
+      role: string;
     } & DefaultSession["user"];
   }
 
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
+  interface User {
+    role?: string;
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    role: string;
+  }
 }
 
 /**
@@ -44,50 +45,32 @@ declare module "next-auth" {
  * @see https://next-auth.js.org/configuration/options
  */
 export const authOptions: NextAuthOptions = {
+  session: {
+    strategy: "jwt", // JWT 전략 사용 (Credentials Provider 필수)
+  },
+  pages: {
+    signIn: "/login",
+    newUser: "/projects",
+  },
   callbacks: {
-    session: async ({ session, user }) => {
-      const dbUser = await db.user.findUnique({
-        where: {
-          id: user.id,
-        },
-      });
-      return {
-        ...session,
-        user: {
-          ...session.user,
-          id: user.id,
-          planId: dbUser?.planId ?? null,
-          role: dbUser?.role,
-        },
-      };
+    jwt: async ({ token, user }) => {
+      if (user) {
+        token.id = user.id;
+        token.role = user.role || "USER";
+      }
+      return token;
+    },
+    session: async ({ session, token }) => {
+      if (token && session.user) {
+        session.user.id = token.id;
+        session.user.role = token.role;
+      }
+      return session;
     },
   },
   events: {
-    async signIn({ user, isNewUser }) {
+    async signIn({ user }) {
       Sentry.setUser({ id: user.id, name: user.name, email: user.email ?? "" });
-      if (isNewUser) {
-        if (isTriggerEnabled) {
-          await slackNewUserNotification.invoke({
-            user: {
-              name: user.name ?? "unknown",
-              email: user.email ?? undefined,
-              id: user.id,
-            },
-          });
-        }
-        if (loops && user.email) {
-          await loops.sendEvent(
-            {
-              email: user.email,
-            },
-            "cascade_sign_up",
-            {
-              ...(user.name && { name: user.name }),
-              email: user.email,
-            },
-          );
-        }
-      }
     },
     signOut() {
       Sentry.setUser(null);
@@ -95,24 +78,53 @@ export const authOptions: NextAuthOptions = {
   },
   adapter: PrismaAdapter(db) as Adapter,
   providers: [
-    DiscordProvider({
-      clientId: env.DISCORD_CLIENT_ID!,
-      clientSecret: env.DISCORD_CLIENT_SECRET!,
-    }),
-    GoogleProvider({
-      clientId: env.GOOGLE_CLIENT_ID!,
-      clientSecret: env.GOOGLE_CLIENT_SECRET!,
-    }),
+    // 이메일/비밀번호 로그인
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        email: { label: "이메일", type: "email" },
+        password: { label: "비밀번호", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("이메일과 비밀번호를 입력해주세요");
+        }
 
-    /**
-     * ...add more providers here.
-     *
-     * Most other providers require a bit more work than the Discord provider. For example, the
-     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-     *
-     * @see https://next-auth.js.org/providers/github
-     */
+        const user = await db.user.findUnique({
+          where: { email: credentials.email },
+        });
+
+        if (!user || !user.password) {
+          throw new Error("등록되지 않은 이메일입니다");
+        }
+
+        const isPasswordValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
+
+        if (!isPasswordValid) {
+          throw new Error("비밀번호가 일치하지 않습니다");
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          role: user.role,
+        };
+      },
+    }),
+    // Google 로그인 (환경변수가 설정된 경우에만 활성화)
+    ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+      ? [
+          GoogleProvider({
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
+          }),
+        ]
+      : []),
   ],
 };
 

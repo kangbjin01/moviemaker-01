@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
-import { Save, FileDown, FileSpreadsheet, Eye } from "lucide-react";
+import { Save, FileDown, FileSpreadsheet } from "lucide-react";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Button } from "~/components/ui/button";
@@ -37,6 +37,9 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
       ? dayjs(initialData.date).format("YYYY-MM-DD")
       : dayjs().format("YYYY-MM-DD"),
     weather: initialData?.weather || "",
+    tempMin: initialData?.tempMin || "",
+    tempMax: initialData?.tempMax || "",
+    precipitation: initialData?.precipitation || "",
     sunrise: initialData?.sunrise || "",
     sunset: initialData?.sunset || "",
     director: initialData?.director || "",
@@ -123,7 +126,7 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
     setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleSave = async () => {
+  const handleSave = async (silent: boolean = false): Promise<DailyCallSheet | null> => {
     setIsLoading(true);
 
     try {
@@ -146,39 +149,60 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
 
       const savedCallSheet = await response.json();
 
-      toast.success(
-        mode === "create" ? "일촬표가 생성되었습니다" : "일촬표가 저장되었습니다"
-      );
+      if (!silent) {
+        toast.success(
+          mode === "create" ? "일촬표가 생성되었습니다" : "일촬표가 저장되었습니다"
+        );
+      }
 
       if (mode === "create") {
         router.push(`/projects/${projectId}/call-sheet/${savedCallSheet.id}`);
+        return null;
       }
+
+      return savedCallSheet;
     } catch (error) {
       console.error("Save failed:", error);
       toast.error("저장에 실패했습니다");
+      return null;
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleExportPDF = async () => {
-    if (!initialData?.id || !project) {
-      toast.error("먼저 저장해주세요");
+    if (!project) {
+      toast.error("프로젝트 정보를 불러오는 중입니다");
       return;
     }
 
     try {
-      toast.loading("PDF 생성 중...", { id: "pdf-generating" });
+      toast.loading("저장 및 PDF 생성 중...", { id: "pdf-generating" });
       
-      // 서버에서 최신 데이터 가져오기 (미리보기 페이지와 동일한 방식)
-      const response = await fetch(`/api/call-sheet/${initialData.id}`);
+      // 먼저 저장
+      const savedCallSheet = await handleSave(true);
+      
+      if (!savedCallSheet && mode === "edit") {
+        // edit 모드에서 저장 실패
+        toast.error("저장에 실패했습니다", { id: "pdf-generating" });
+        return;
+      }
+      
+      // 서버에서 최신 데이터 가져오기
+      const callSheetId = savedCallSheet?.id || initialData?.id;
+      if (!callSheetId) {
+        toast.error("일촬표 ID를 찾을 수 없습니다", { id: "pdf-generating" });
+        return;
+      }
+      
+      const response = await fetch(`/api/call-sheet/${callSheetId}`);
       if (!response.ok) {
         throw new Error("데이터를 불러오는데 실패했습니다");
       }
       const latestCallSheet = await response.json();
       
       await downloadCallSheetPDF(latestCallSheet, project);
-      toast.success("PDF가 다운로드되었습니다", { id: "pdf-generating" });
+      toast.success("저장 완료 및 PDF 다운로드됨", { id: "pdf-generating" });
     } catch (error) {
       console.error("PDF 생성 실패:", error);
       toast.error("PDF 생성에 실패했습니다", { id: "pdf-generating" });
@@ -186,21 +210,34 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
   };
 
   const handleExportExcel = async () => {
-    if (!initialData?.id) {
-      toast.error("먼저 저장해주세요");
+    if (!project) {
+      toast.error("프로젝트 정보를 불러오는 중입니다");
       return;
     }
 
-    window.open(`/api/call-sheet/${initialData.id}/excel`, "_blank");
-  };
-
-  const handlePreview = () => {
-    if (!initialData?.id) {
-      toast.error("먼저 저장해주세요");
-      return;
+    try {
+      toast.loading("저장 및 엑셀 생성 중...", { id: "excel-generating" });
+      
+      // 먼저 저장
+      const savedCallSheet = await handleSave(true);
+      
+      if (!savedCallSheet && mode === "edit") {
+        toast.error("저장에 실패했습니다", { id: "excel-generating" });
+        return;
+      }
+      
+      const callSheetId = savedCallSheet?.id || initialData?.id;
+      if (!callSheetId) {
+        toast.error("일촬표 ID를 찾을 수 없습니다", { id: "excel-generating" });
+        return;
+      }
+      
+      toast.success("저장 완료. 엑셀 다운로드 중...", { id: "excel-generating" });
+      window.open(`/api/call-sheet/${callSheetId}/excel`, "_blank");
+    } catch (error) {
+      console.error("엑셀 생성 실패:", error);
+      toast.error("엑셀 생성에 실패했습니다", { id: "excel-generating" });
     }
-
-    router.push(`/projects/${projectId}/call-sheet/${initialData.id}/preview`);
   };
 
   return (
@@ -220,10 +257,6 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
       <div className="flex flex-wrap gap-3 justify-end">
         {mode === "edit" && (
           <>
-            <Button variant="outline" onClick={handlePreview}>
-              <Eye className="h-4 w-4 mr-2" />
-              미리보기
-            </Button>
             <Button variant="outline" onClick={handleExportPDF}>
               <FileDown className="h-4 w-4 mr-2" />
               PDF 출력
@@ -234,7 +267,7 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
             </Button>
           </>
         )}
-        <Button onClick={handleSave} disabled={isLoading}>
+        <Button onClick={() => handleSave(false)} disabled={isLoading}>
           <Save className="h-4 w-4 mr-2" />
           {isLoading ? "저장 중..." : "저장"}
         </Button>
@@ -299,6 +332,33 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
                   value={formData.weather || ""}
                   onChange={(e) => handleInputChange("weather", e.target.value)}
                   placeholder="맑음, 흐림 등"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tempMin">최저기온</Label>
+                <Input
+                  id="tempMin"
+                  value={formData.tempMin || ""}
+                  onChange={(e) => handleInputChange("tempMin", e.target.value)}
+                  placeholder="예: -5℃"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tempMax">최고기온</Label>
+                <Input
+                  id="tempMax"
+                  value={formData.tempMax || ""}
+                  onChange={(e) => handleInputChange("tempMax", e.target.value)}
+                  placeholder="예: 10℃"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="precipitation">강수확률</Label>
+                <Input
+                  id="precipitation"
+                  value={formData.precipitation || ""}
+                  onChange={(e) => handleInputChange("precipitation", e.target.value)}
+                  placeholder="예: 20%"
                 />
               </div>
               <div className="space-y-2">
@@ -502,7 +562,7 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
 
       {/* 하단 저장 버튼 */}
       <div className="flex justify-end pt-4 border-t border-border">
-        <Button onClick={handleSave} disabled={isLoading} size="lg">
+        <Button onClick={() => handleSave(false)} disabled={isLoading} size="lg">
           <Save className="h-4 w-4 mr-2" />
           {isLoading ? "저장 중..." : "저장"}
         </Button>

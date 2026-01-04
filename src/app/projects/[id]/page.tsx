@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   Plus,
   FileText,
+  FileDown,
   Calendar,
   Settings,
   Download,
@@ -35,6 +36,7 @@ import {
 } from "~/components/ui/alert-dialog";
 import { Badge } from "~/components/ui/badge";
 import type { Project, DailyCallSheet, ProjectStatus } from "~/types/call-sheet";
+import { downloadCallSheetPDF } from "~/components/call-sheet/CallSheetPDF";
 import { toast } from "sonner";
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
@@ -101,6 +103,26 @@ export default function ProjectDetailPage() {
     } catch (error) {
       console.error("Failed to delete:", error);
       toast.error("삭제에 실패했습니다");
+    }
+  };
+
+  const handleDownloadPDF = async (callSheetId: string) => {
+    if (!project) return;
+    
+    try {
+      toast.loading("PDF 생성 중...", { id: "pdf-generating" });
+      
+      const response = await fetch(`/api/call-sheet/${callSheetId}`);
+      if (!response.ok) {
+        throw new Error("데이터를 불러오는데 실패했습니다");
+      }
+      const callSheet = await response.json();
+      
+      await downloadCallSheetPDF(callSheet, project);
+      toast.success("PDF가 다운로드되었습니다", { id: "pdf-generating" });
+    } catch (error) {
+      console.error("PDF 생성 실패:", error);
+      toast.error("PDF 생성에 실패했습니다", { id: "pdf-generating" });
     }
   };
 
@@ -239,6 +261,14 @@ export default function ProjectDetailPage() {
                           미리보기
                         </Button>
                       </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownloadPDF(callSheet.id!)}
+                      >
+                        <FileDown className="h-4 w-4 mr-1" />
+                        PDF
+                      </Button>
                       <a href={`/api/call-sheet/${callSheet.id}/excel`}>
                         <Button variant="ghost" size="sm">
                           <Download className="h-4 w-4 mr-1" />

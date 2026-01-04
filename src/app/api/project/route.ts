@@ -1,10 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
+import { getServerAuthSession } from "~/server/auth";
 
-// GET: 프로젝트 목록 조회
+// GET: 프로젝트 목록 조회 (본인 프로젝트만)
 export async function GET() {
   try {
+    const session = await getServerAuthSession();
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "로그인이 필요합니다" },
+        { status: 401 }
+      );
+    }
+
     const projects = await db.project.findMany({
+      where: {
+        userId: session.user.id,
+      },
       include: {
         _count: {
           select: { callSheets: true },
@@ -26,6 +39,15 @@ export async function GET() {
 // POST: 새 프로젝트 생성
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerAuthSession();
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "로그인이 필요합니다" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
     const project = await db.project.create({
@@ -39,7 +61,7 @@ export async function POST(request: NextRequest) {
         startDate: body.startDate ? new Date(body.startDate) : null,
         endDate: body.endDate ? new Date(body.endDate) : null,
         status: body.status || "PREP",
-        // MVP: userId 없이 생성 (추후 인증 연동)
+        userId: session.user.id,
       },
     });
 
@@ -52,4 +74,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

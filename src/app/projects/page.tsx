@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
 import dayjs from "dayjs";
-import { Plus, Film, FolderOpen, Calendar, Trash2, Settings } from "lucide-react";
+import { Plus, Film, FolderOpen, Calendar, Trash2, Settings, LogOut, User } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -48,6 +49,7 @@ interface ProjectWithCount extends Project {
 }
 
 export default function ProjectsPage() {
+  const { data: session } = useSession();
   const [projects, setProjects] = useState<ProjectWithCount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -91,6 +93,22 @@ export default function ProjectsPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* 상단 사용자 정보 */}
+        <div className="flex justify-end items-center gap-4 mb-4 pb-4 border-b border-border">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <User className="h-4 w-4" />
+            <span>{session?.user?.name || session?.user?.email}</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => signOut({ callbackUrl: "/" })}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            로그아웃
+          </Button>
+        </div>
+
         {/* 헤더 */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>

@@ -100,6 +100,9 @@ export interface DailyCallSheet {
   shootingDay: number;
   date: string | Date;
   weather?: string | null;
+  tempMin?: string | null;
+  tempMax?: string | null;
+  precipitation?: string | null;
   sunrise?: string | null;
   sunset?: string | null;
   director?: string | null;
