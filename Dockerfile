@@ -3,6 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@8.7.5 --activate
 
@@ -10,29 +13,32 @@ RUN corepack enable && corepack prepare pnpm@8.7.5 --activate
 COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma/
 
-# Use PostgreSQL schema for production
-RUN cp prisma/schema.production.prisma prisma/schema.prisma
-
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
+# Use PostgreSQL schema for production (after COPY . . to avoid overwrite)
+RUN cp prisma/schema.production.prisma prisma/schema.prisma
+
+# Regenerate Prisma client with PostgreSQL schema
+RUN npx prisma generate
+
 # Set environment variable for build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_VALIDATION=1
 
-# Build the application
-RUN pnpm build
+# Build Next.js (skip migrate, will run at runtime)
+RUN npx next build
 
 # Production stage
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@8.7.5 --activate
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
@@ -59,4 +65,3 @@ EXPOSE 3000
 
 # Start the application
 CMD ["node", "server.js"]
-
