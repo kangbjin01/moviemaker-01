@@ -1,0 +1,224 @@
+// This is the PRODUCTION Prisma schema file (PostgreSQL)
+// For local development, use schema.prisma (SQLite)
+// 
+// To deploy to production:
+// 1. Copy this file to schema.prisma before building
+// 2. Or use: cp prisma/schema.production.prisma prisma/schema.prisma
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+    url       = env("DATABASE_URL")
+}
+
+enum Role {
+    USER
+    SUPER_ADMIN
+}
+
+// Necessary for Next auth
+model Account {
+    id                String  @id @default(cuid())
+    userId            String
+    type              String
+    provider          String
+    providerAccountId String
+    refresh_token     String? @db.Text
+    access_token      String? @db.Text
+    expires_at        Int?
+    token_type        String?
+    scope             String?
+    id_token          String? @db.Text
+    session_state     String?
+    user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([provider, providerAccountId])
+}
+
+model Session {
+    id           String   @id @default(cuid())
+    sessionToken String   @unique
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+    id                       String                     @id @default(cuid())
+    name                     String?
+    email                    String?                    @unique
+    emailVerified            DateTime?
+    image                    String?
+    role                     Role                       @default(USER)
+    accounts                 Account[]
+    sessions                 Session[]
+    LemonSqueezySubscription LemonSqueezySubscription[]
+
+    plan         Plan?          @relation(fields: [planId], references: [id])
+    planId       Int?
+    FeatureUsage FeatureUsage[]
+
+    createdAt       DateTime          @default(now())
+    updatedAt       DateTime          @default(now()) @updatedAt
+    oneTimePurchase OneTimePurchase[]
+    
+    // 일일촬영계획표 관계
+    callSheets      DailyCallSheet[]
+}
+
+model LemonSqueezyWebhookEvent {
+    id              Int      @id @default(autoincrement())
+    eventName       String
+    processed       Boolean  @default(false)
+    body            Json
+    createdAt       DateTime @default(now())
+    processingError String?
+}
+
+model LemonSqueezySubscription {
+    id                                  Int       @id @default(autoincrement())
+    lemonSqueezyId                      String    @unique
+    orderId                             Int
+    name                                String
+    email                               String
+    status                              String
+    renewsAt                            DateTime?
+    endsAt                              DateTime?
+    trialEndsAt                         DateTime?
+    isUsageBased                        Boolean   @default(false)
+    isPaused                            Boolean   @default(false)
+    customerId                          String
+    variantId                           String
+    customerPortalUrl                   String?
+    updatePaymentMethodUrl              String?
+    customerPortalUpdateSubscriptionUrl String?
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OneTimePurchase {
+    id             Int    @id @default(autoincrement())
+    lemonSqueezyId String @unique
+    orderId        Int
+    name           String
+    email          String
+    status         String
+    customerId     String
+    variantId      String
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id])
+}
+
+model Plan {
+    id                    Int    @id @default(autoincrement())
+    lemonSqueezyVariantId String @unique
+    name                  String
+
+    buttonClicks Int?
+    aiCalls      Int?
+    fileUploads  Int?
+
+    users User[]
+}
+
+model FeatureUsage {
+    id           String @id @default(cuid())
+    userId       String
+    buttonClicks Int    @default(0)
+    aiCalls      Int    @default(0)
+    fileUploads  Int    @default(0)
+
+    date DateTime @default(now())
+    user User     @relation(fields: [userId], references: [id])
+
+    @@unique([userId, date])
+}
+
+model VerificationToken {
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
+}
+
+// ==========================================
+// 일일촬영계획표 (Daily Call Sheet) 모델
+// ==========================================
+
+model DailyCallSheet {
+    id            String   @id @default(cuid())
+    
+    userId        String?
+    user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+    
+    projectTitle  String
+    episode       String?
+    shootingDay   Int
+    date          DateTime
+    
+    weather       String?
+    sunrise       String?
+    sunset        String?
+    
+    director      String?
+    producer      String?
+    adName        String?
+    
+    location      String?
+    address       String?
+    parkingInfo   String?
+    
+    emergencyContact String?
+    
+    crewCallTime     String?
+    talentCallTime   String?
+    
+    generalNotes  String?  @db.Text
+    
+    scenes        Scene[]
+    
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+}
+
+model Scene {
+    id            String   @id @default(cuid())
+    
+    callSheetId   String
+    callSheet     DailyCallSheet @relation(fields: [callSheetId], references: [id], onDelete: Cascade)
+    
+    order         Int
+    
+    sceneNumber   String
+    description   String?  @db.Text
+    
+    locationType  String?
+    locationName  String?
+    dayNight      String?
+    
+    pages         String?
+    
+    estimatedTime Int?
+    startTime     String?
+    endTime       String?
+    
+    cast          String?
+    extras        Int?
+    
+    props         String?
+    wardrobe      String?
+    makeup        String?
+    specialEquip  String?
+    
+    notes         String?  @db.Text
+    
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+}
+

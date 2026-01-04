@@ -1,300 +1,178 @@
-import {
-  SiGithub,
-  SiNextdotjs,
-  SiPostgresql,
-  SiPosthog,
-  SiPrisma,
-  SiSentry,
-  SiStorybook,
-  SiTailwindcss,
-  SiTrpc,
-} from "@icons-pack/react-simple-icons";
-
 import { type Metadata } from "next";
-
-import LsLogo from "./ls-logo";
-import { Button } from "~/components/ui/button";
-import { Badge } from "~/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import Link from "next/link";
-import { Terminal } from "lucide-react";
-import { Alert, AlertTitle, AlertDescription } from "~/components/ui/alert";
-import { Separator } from "~/components/ui/separator";
-import Image from "next/image";
-import VideoComponent from "./video-component";
-
-import CloneRepoBadge from "./clone-repo-badge";
-import { format } from "date-fns";
+import { Film, FileText, Download, Users, Zap, ArrowRight } from "lucide-react";
+import { Button } from "~/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "Cascade -  free open-source SaaS boilerplate",
+  title: "MovieMaker - 영화 프로덕션 일일촬영계획표",
   description:
-    "Kickstart your SaaS project with Cascade - open-source SaaS boilerplate. Payments, error tracking, analytics, background jobs, email marketing. All in one package.",
+    "영화 및 영상 프로덕션을 위한 일일촬영계획표 작성 서비스. 웹에서 편리하게 입력하고, PDF와 엑셀로 출력하세요.",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
-  openGraph: {
-    url: "https://cascade.stackonfire.com",
-    title: "Cascade - open-source SaaS boilerplate",
-    description:
-      "Kickstart your SaaS project with Cascade - open-source SaaS boilerplate. Payments, error tracking, analytics, background jobs, email marketing. All in one package.",
-    images: [
-      {
-        url: "https://cascade.stackonfire.com/api/og",
-        width: 800,
-        height: 600,
-        alt: "Cascade logo",
-      },
-    ],
-  },
 };
 
-const Logos = () => {
+export default function Home() {
   return (
-    <>
-      <li>
-        <SiNextdotjs className="h-14 w-14 p-2" />
-      </li>
-      <li>
-        <SiTrpc className="h-14 w-14 p-2" />
-      </li>
-      <li>
-        <LsLogo className="mb-auto h-12 w-12 fill-emerald-200" />
-      </li>
-      <li>
-        <SiPrisma className="h-14 w-14 p-2" />
-      </li>
-      <li>
-        <SiPostgresql className="h-14 w-14 p-2" />
-      </li>
-      <li>
-        <SiTailwindcss className="h-14 w-14 p-2" />
-      </li>
-      <li>
-        <SiSentry className="h-14 w-14 p-2" />
-      </li>
-      <li>
-        <SiPosthog className="h-14 w-14 p-2" />
-      </li>
-      <li>
-        <SiStorybook className="h-14 w-14 p-2" />
-      </li>
-    </>
-  );
-};
+    <div className="min-h-screen bg-background">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-muted/50 to-background" />
+        <div className="relative container mx-auto px-4 py-24 md:py-32">
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted text-sm mb-8">
+              <Film className="h-4 w-4" />
+              <span>영화 프로덕션 매니지먼트</span>
+            </div>
+            
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
+              일일촬영계획표를
+              <br />
+              <span className="text-muted-foreground">더 스마트하게</span>
+            </h1>
+            
+            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
+              영화 및 영상 프로덕션을 위한 일일촬영계획표를 웹에서 편리하게 작성하고,
+              PDF와 엑셀로 바로 출력하세요.
+            </p>
 
-export default async function Home() {
-  const stargazersQuery = await fetch(
-    `https://api.github.com/repos/d-ivashchuk/cascade`,
-    {
-      next: { revalidate: 60 * 60 },
-    },
-  );
-  const lastCommitQuery = await fetch(
-    `https://api.github.com/repos/d-ivashchuk/cascade/commits`,
-    {
-      next: { revalidate: 60 * 60 },
-    },
-  );
-
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const stargazersData: { stargazers_count: number } =
-    await stargazersQuery.json();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const lastCommitData: { commit: { committer: { date: string } } }[] =
-    await lastCommitQuery.json();
-
-  return (
-    <div className="px-4">
-      <Image
-        src="./cd.svg"
-        width={100}
-        height={100}
-        alt="cascade logo"
-        className=" mx-auto mb-4 rounded-md md:block "
-      />
-      <div className="mb-4 flex flex-col justify-center text-center align-middle">
-        <div className="mb-4">
-          <h1 className="mb-2 text-4xl font-bold uppercase">Cascade</h1>
-          <h2 className="mb-2 text-xl text-muted-foreground">
-            Free and <b>open-source</b> SaaS boilerplate. <br />
-          </h2>
-          {lastCommitData[0] && (
-            <Badge variant="outline" className="mx-auto max-w-4xl">
-              <div className=" mr-2 h-2 w-2 animate-ping rounded-full bg-green-400 duration-1000" />
-              Last updated on{" "}
-              {format(new Date(lastCommitData[0].commit.committer.date), "PP")}
-            </Badge>
-          )}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/call-sheet">
+                <Button size="lg" className="w-full sm:w-auto text-base">
+                  일촬표 작성 시작
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+              <Link href="/call-sheet">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto text-base">
+                  둘러보기
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
+      </section>
 
-        <div className="flex gap-2 self-center align-middle">
-          <Link href="/app/login">
-            <Button>Try demo</Button>
-          </Link>
-          <Link target="_blank" href="https://github.com/d-ivashchuk/cascade">
-            <Button variant="outline">
-              <SiGithub className="mr-2 h-4 w-4" />{" "}
-              {stargazersData
-                ? stargazersData.stargazers_count
-                : "Code on GitHub"}
-            </Button>
-          </Link>
-          <Link href="https://stackonfire.mintlify.app/introduction">
-            <Button variant="outline">Docs</Button>
-          </Link>
-        </div>
-        <CloneRepoBadge />
-      </div>
-      <div className="mx-auto max-w-5xl">
-        <div className="mx-auto mt-4 inline-flex w-full  flex-nowrap overflow-hidden [mask-image:_linear-gradient(to_right,transparent_0,_black_128px,_black_calc(100%-200px),transparent_100%)]">
-          <ul className="flex animate-infinite-scroll items-center justify-center md:justify-start [&_img]:max-w-none [&_li]:mx-8">
-            <Logos />
-          </ul>
-          <ul
-            className="flex animate-infinite-scroll items-center justify-center md:justify-start [&_img]:max-w-none [&_li]:mx-8"
-            aria-hidden="true"
-          >
-            <Logos />
-          </ul>
-        </div>
-      </div>
+      {/* Features Section */}
+      <section className="py-24 border-t border-border">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              프로덕션에 필요한 모든 것
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              복잡한 촬영 일정을 체계적으로 관리하고, 팀과 효율적으로 공유하세요.
+            </p>
+          </div>
 
-      <VideoComponent />
-
-      <div className="mx-auto max-w-4xl">
-        <div className="my-16">
-          <Tabs defaultValue="architecture">
-            <TabsList className="flex self-center">
-              <TabsTrigger value="architecture">Architecture</TabsTrigger>
-              <TabsTrigger value="tools">Tools</TabsTrigger>
-              <TabsTrigger value="concept">Concept</TabsTrigger>
-            </TabsList>
-            <TabsContent value="architecture">
-              <div className="max-w-3xl">
-                <p className="prose lg:prose-xl mx-auto">
-                  Cascade is based on{" "}
-                  <Link className="underline" href="https://create.t3.gg/">
-                    T3 Stack
-                  </Link>
-                  . It is a fullstack boilerplate that is relying on{" "}
-                  <Link className="underline" href="https://trpc.io/">
-                    tRPC
-                  </Link>{" "}
-                  &{" "}
-                  <Link className="underline" href="https://nextjs.org/">
-                    Next.js
-                  </Link>
-                  . <br />
-                  Cascade is a <b>SaaS boilerplate</b> meaning it is making
-                  opinionated choices when it comes to technologies used on top
-                  of T3 base stack. <br />
-                </p>
-                <Alert className="mt-4">
-                  <Terminal className="h-4 w-4" />
-                  <AlertTitle>Important</AlertTitle>
-                  <AlertDescription>
-                    Main goal of Cascade is to get you from <b>ideation</b> to{" "}
-                    <b>first sale</b> as fast as possible. After that the
-                    template is designed to support <b>growth and scale</b> .
-                  </AlertDescription>
-                </Alert>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {/* Feature 1 */}
+            <div className="p-8 rounded-2xl bg-card border border-border hover:border-foreground/20 transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-6">
+                <FileText className="h-6 w-6" />
               </div>
-            </TabsContent>
-            <TabsContent value="tools">
-              Cascade mainly relies on <b>open-source</b> tools and services to
-              the main extent. There are some <b>paid services</b> included in
-              the starter template, but those are either industry standards or
-              tools critically acclaimed by the community. <br /> <br />
-              Most importantly Cascade is designed to be <b>cost-effective</b>.
-              All of the paid services are having generous free plans and will
-              not require any costs unless you have big amounts of users.
-            </TabsContent>
-            <TabsContent value="concept">
-              Cascade differs from the most of the templates because it covers
-              not only the <b>technical side</b> of the things but also the{" "}
-              <b>business side</b>.
-              <br /> <br />
-              Cascade template is designed in a way to help you:
-              <ul className="list-disc">
-                <li>
-                  Build your business logic from <b>Day 1</b> with existing code
-                  setup
-                </li>
-                <li>
-                  Get your first paying customers with simple but comprehensive
-                  payment setup
-                </li>
-                <li>
-                  Evolve your business with tools to monitor user behaviors &
-                  errors in your codebase.
-                </li>
-              </ul>
-            </TabsContent>
-          </Tabs>
+              <h3 className="text-xl font-semibold mb-3">직관적인 입력</h3>
+              <p className="text-muted-foreground">
+                씬 정보, 출연진, 장소, 시간 등 모든 정보를 웹에서 편리하게 입력하세요.
+                드래그앤드롭으로 촬영 순서도 쉽게 조정할 수 있습니다.
+              </p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="p-8 rounded-2xl bg-card border border-border hover:border-foreground/20 transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-6">
+                <Download className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">PDF & 엑셀 출력</h3>
+              <p className="text-muted-foreground">
+                작성한 일촬표를 가로 A4 PDF 또는 엑셀 파일로 바로 출력하세요.
+                현장에서 바로 프린트해서 사용할 수 있습니다.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="p-8 rounded-2xl bg-card border border-border hover:border-foreground/20 transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-6">
+                <Users className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">팀 협업 (Coming Soon)</h3>
+              <p className="text-muted-foreground">
+                조연출, 촬영감독, 제작부 모두가 실시간으로 일촬표를 확인하고
+                수정 사항을 즉시 공유할 수 있습니다.
+              </p>
+            </div>
+
+            {/* Feature 4 */}
+            <div className="p-8 rounded-2xl bg-card border border-border hover:border-foreground/20 transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-6">
+                <Zap className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">자동 정보 입력</h3>
+              <p className="text-muted-foreground">
+                촬영 날짜를 입력하면 일출/일몰 시간, 날씨 예보 등 기본 정보가
+                자동으로 입력됩니다. (MVP에서 순차 지원)
+              </p>
+            </div>
+
+            {/* Feature 5 */}
+            <div className="p-8 rounded-2xl bg-card border border-border hover:border-foreground/20 transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-6">
+                <Film className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">현장 운용 모드 (Coming Soon)</h3>
+              <p className="text-muted-foreground">
+                촬영 현장에서 모바일로 일촬표를 확인하고, 실시간으로 진행 상황을
+                업데이트하세요. 촬영 순서 변경도 즉시 반영됩니다.
+              </p>
+            </div>
+
+            {/* Feature 6 */}
+            <div className="p-8 rounded-2xl bg-card border border-border hover:border-foreground/20 transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-6">
+                <FileText className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">템플릿 저장</h3>
+              <p className="text-muted-foreground">
+                자주 사용하는 양식을 템플릿으로 저장하고, 새 프로젝트에서
+                빠르게 불러와 사용하세요.
+              </p>
+            </div>
+          </div>
         </div>
-        <Separator className="my-4" />
-        <h2 className="mb-4 text-center text-3xl">
-          What is covered in template
-        </h2>
-        <h3 className="mb-4 text-center text-2xl">
-          <b>Technical</b>
-        </h3>
-        <ul className="list-disc">
-          <li>
-            Basic T3 stack setup with Next.js, Prisma, PostgreSQL, TailwindCSS.
-          </li>
-          <li>
-            Styling with shadcn/ui components for fast UI prototyping |{" "}
-            <b>Dark/light theme, TanStack Table integration</b>
-          </li>
-          <li>
-            Authentication with Next Auth | <b>Discord & Google examples</b>{" "}
-          </li>
-          <li>
-            Payments with Lemon Squeezy |{" "}
-            <b>Checkout sessions, Subscriptions, One time payments</b>
-          </li>
-          <li>
-            Background jobs with Trigger.dev |{" "}
-            <b>Slack notifications on new Users, background job processing</b>
-          </li>
-          <li>
-            Error handling with Sentry |{" "}
-            <b>Monitoring, Alerts, Issue tracking</b>
-          </li>
-          <li>
-            Storybook | <b>Component library, Documentation</b>
-          </li>
-          <li>
-            GitHub actions | <b>CI/CD, Automated testing</b>
-          </li>
-          <li>
-            Lost Pixel | <b>Visual regression testing</b>
-          </li>
-        </ul>
-        <h3 className="mb-4 mt-8 text-center text-2xl">
-          <b>Business</b>
-        </h3>
-        <ul className="list-disc">
-          <li>Simple markdown blog with Contentlayer </li>
-          <li>
-            SEO with Next.js |{" "}
-            <b>Dynamic Sitemap,Dynamic Open Graph, Twitter Cards</b>
-          </li>
-          <li>
-            Email user flows with Loops |{" "}
-            <b>
-              Welcome emails for newly signed up users, newsletter subscription
-            </b>
-          </li>
-          <li>
-            Analytics with Posthog |{" "}
-            <b>Event tracking, User behavior analysis</b>
-          </li>
-          <li>
-            Analytics with Plausible | <b>Page analytics</b>
-          </li>
-        </ul>
-      </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 border-t border-border">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+              지금 바로 시작하세요
+            </h2>
+            <p className="text-muted-foreground text-lg mb-10">
+              복잡한 가입 절차 없이 바로 일촬표를 작성할 수 있습니다.
+            </p>
+            <Link href="/call-sheet/create">
+              <Button size="lg" className="text-base">
+                새 일촬표 만들기
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-8 border-t border-border">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Film className="h-5 w-5" />
+              <span className="font-semibold">MovieMaker</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              영화 프로덕션을 위한 스마트 도구
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

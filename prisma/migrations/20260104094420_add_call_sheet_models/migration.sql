@@ -1,0 +1,51 @@
+-- CreateTable
+CREATE TABLE "DailyCallSheet" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT,
+    "projectTitle" TEXT NOT NULL,
+    "episode" TEXT,
+    "shootingDay" INTEGER NOT NULL,
+    "date" DATETIME NOT NULL,
+    "weather" TEXT,
+    "sunrise" TEXT,
+    "sunset" TEXT,
+    "director" TEXT,
+    "producer" TEXT,
+    "adName" TEXT,
+    "location" TEXT,
+    "address" TEXT,
+    "parkingInfo" TEXT,
+    "emergencyContact" TEXT,
+    "crewCallTime" TEXT,
+    "talentCallTime" TEXT,
+    "generalNotes" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "DailyCallSheet_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "Scene" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "callSheetId" TEXT NOT NULL,
+    "order" INTEGER NOT NULL,
+    "sceneNumber" TEXT NOT NULL,
+    "description" TEXT,
+    "locationType" TEXT,
+    "locationName" TEXT,
+    "dayNight" TEXT,
+    "pages" TEXT,
+    "estimatedTime" INTEGER,
+    "startTime" TEXT,
+    "endTime" TEXT,
+    "cast" TEXT,
+    "extras" INTEGER,
+    "props" TEXT,
+    "wardrobe" TEXT,
+    "makeup" TEXT,
+    "specialEquip" TEXT,
+    "notes" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Scene_callSheetId_fkey" FOREIGN KEY ("callSheetId") REFERENCES "DailyCallSheet" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);

@@ -5,7 +5,14 @@
 await import("./src/env.mjs");
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+  output: "standalone",
+  experimental: {
+    outputFileTracingIncludes: {
+      "/*": ["./prisma/**/*"],
+    },
+  },
+};
 
 // Injected content via Sentry wizard below
 
