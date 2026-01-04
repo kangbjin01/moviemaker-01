@@ -10,6 +10,9 @@ RUN corepack enable && corepack prepare pnpm@8.7.5 --activate
 COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma/
 
+# Use PostgreSQL schema for production
+RUN cp prisma/schema.production.prisma prisma/schema.prisma
+
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 

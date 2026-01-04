@@ -52,6 +52,7 @@ model User {
     email                    String?                    @unique
     emailVerified            DateTime?
     image                    String?
+    password                 String?
     role                     Role                       @default(USER)
     accounts                 Account[]
     sessions                 Session[]
@@ -65,8 +66,8 @@ model User {
     updatedAt       DateTime          @default(now()) @updatedAt
     oneTimePurchase OneTimePurchase[]
     
-    // 일일촬영계획표 관계
-    callSheets      DailyCallSheet[]
+    // 프로젝트 관계
+    projects        Project[]
 }
 
 model LemonSqueezyWebhookEvent {
@@ -148,21 +149,90 @@ model VerificationToken {
 }
 
 // ==========================================
+// 프로젝트 (Project) 모델
+// ==========================================
+
+model Project {
+    id            String   @id @default(cuid())
+    
+    userId        String?
+    user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+    
+    title         String
+    type          String?
+    productionCo  String?
+    
+    director      String?
+    producer      String?
+    adName        String?
+    
+    startDate     DateTime?
+    endDate       DateTime?
+    
+    status        String           @default("PREP")
+    
+    callSheets    DailyCallSheet[]
+    projectStaff  ProjectStaff[]
+    projectCast   ProjectCast[]
+    
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+}
+
+// ==========================================
+// 프로젝트 스태프 (Project Staff) 모델
+// ==========================================
+
+model ProjectStaff {
+    id            String   @id @default(cuid())
+    
+    projectId     String
+    project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    
+    name          String
+    position      String
+    contact       String?
+    
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+}
+
+// ==========================================
+// 프로젝트 캐스트 (Project Cast) 모델
+// ==========================================
+
+model ProjectCast {
+    id            String   @id @default(cuid())
+    
+    projectId     String
+    project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    
+    actorName     String
+    role          String
+    contact       String?
+    
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+}
+
+// ==========================================
 // 일일촬영계획표 (Daily Call Sheet) 모델
 // ==========================================
 
 model DailyCallSheet {
     id            String   @id @default(cuid())
     
-    userId        String?
-    user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+    projectId     String
+    project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
     
-    projectTitle  String
     episode       String?
     shootingDay   Int
     date          DateTime
     
     weather       String?
+    tempMin       String?
+    tempMax       String?
+    precipitation String?
     sunrise       String?
     sunset        String?
     
@@ -172,6 +242,7 @@ model DailyCallSheet {
     
     location      String?
     address       String?
+    meetingPlace  String?
     parkingInfo   String?
     
     emergencyContact String?
@@ -181,7 +252,20 @@ model DailyCallSheet {
     
     generalNotes  String?  @db.Text
     
+    detailDirection     String?  @db.Text
+    detailAssistDir     String?  @db.Text
+    detailLighting      String?  @db.Text
+    detailWardrobe      String?  @db.Text
+    detailSound         String?  @db.Text
+    detailProduction    String?  @db.Text
+    detailArt           String?  @db.Text
+    detailCamera        String?  @db.Text
+    detailEtc           String?  @db.Text
+    
     scenes        Scene[]
+    schedules     Schedule[]
+    staffList     Staff[]
+    castMembers   CastMember[]
     
     createdAt     DateTime @default(now())
     updatedAt     DateTime @updatedAt
@@ -222,3 +306,65 @@ model Scene {
     updatedAt     DateTime @updatedAt
 }
 
+// ==========================================
+// 전체 일정 (Schedule) 모델
+// ==========================================
+
+model Schedule {
+    id            String   @id @default(cuid())
+    
+    callSheetId   String
+    callSheet     DailyCallSheet @relation(fields: [callSheetId], references: [id], onDelete: Cascade)
+    
+    order         Int
+    
+    time          String?
+    content       String?
+    
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+}
+
+// ==========================================
+// 스태프 (Staff) 모델
+// ==========================================
+
+model Staff {
+    id            String   @id @default(cuid())
+    
+    callSheetId   String
+    callSheet     DailyCallSheet @relation(fields: [callSheetId], references: [id], onDelete: Cascade)
+    
+    order         Int
+    
+    position      String?
+    name          String?
+    contact       String?
+    
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+}
+
+// ==========================================
+// 캐스트 (CastMember) 모델
+// ==========================================
+
+model CastMember {
+    id            String   @id @default(cuid())
+    
+    callSheetId   String
+    callSheet     DailyCallSheet @relation(fields: [callSheetId], references: [id], onDelete: Cascade)
+    
+    order         Int
+    
+    role          String?
+    actorName     String?
+    callTime      String?
+    callLocation  String?
+    scenes        String?
+    preparation   String?
+    contact       String?
+    
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+}
