@@ -29,6 +29,11 @@ export default function RootLayout({
           src="https://app.lemonsqueezy.com/js/lemon.js"
           strategy="beforeInteractive"
         />
+        {/* 카카오 주소 API (Daum Postcode) */}
+        <Script
+          src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
+          strategy="afterInteractive"
+        />
         <Suspense>
           <Providers>
             <AppShell>{children}</AppShell>

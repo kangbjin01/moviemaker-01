@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
-import { Save, FileDown, FileSpreadsheet } from "lucide-react";
+import { Save, FileDown, FileSpreadsheet, Cloud, Loader2, Search } from "lucide-react";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Button } from "~/components/ui/button";
@@ -27,6 +27,8 @@ interface CallSheetFormProps {
 export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingWeather, setIsLoadingWeather] = useState(false);
+  const [highlightFields, setHighlightFields] = useState<string[]>([]);
   const [project, setProject] = useState<Project | null>(null);
 
   const [formData, setFormData] = useState<CallSheetFormData>({
@@ -125,6 +127,85 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
   const handleDetailChange = useCallback((field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
+
+  const handleFetchWeather = async () => {
+    const missingFields: string[] = [];
+    if (!formData.location) missingFields.push("location");
+    if (!formData.date) missingFields.push("date");
+    
+    if (missingFields.length > 0) {
+      setHighlightFields(missingFields);
+      toast.error("촬영장소와 촬영날짜를 먼저 입력해주세요");
+      // 3초 후 하이라이트 제거
+      setTimeout(() => setHighlightFields([]), 3000);
+      return;
+    }
+
+    setIsLoadingWeather(true);
+    try {
+      const dateStr = typeof formData.date === "string" 
+        ? formData.date 
+        : dayjs(formData.date).format("YYYY-MM-DD");
+      
+      const response = await fetch(
+        `/api/weather?location=${encodeURIComponent(formData.location)}&date=${dateStr}`
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "날씨 정보를 가져오는데 실패했습니다");
+      }
+
+      const weatherData = await response.json();
+
+      setFormData((prev) => ({
+        ...prev,
+        weather: weatherData.weather || prev.weather,
+        tempMin: weatherData.tempMin || prev.tempMin,
+        tempMax: weatherData.tempMax || prev.tempMax,
+        precipitation: weatherData.precipitation || prev.precipitation,
+        sunrise: weatherData.sunrise || prev.sunrise,
+        sunset: weatherData.sunset || prev.sunset,
+      }));
+
+      toast.success("날씨 정보가 입력되었습니다");
+    } catch (error) {
+      console.error("날씨 가져오기 실패:", error);
+      toast.error(error instanceof Error ? error.message : "날씨 정보를 가져오는데 실패했습니다");
+    } finally {
+      setIsLoadingWeather(false);
+    }
+  };
+
+  // 카카오 주소 검색 (Daum Postcode)
+  const handleSearchAddress = () => {
+    // @ts-expect-error - daum is loaded from external script
+    if (typeof window !== "undefined" && window.daum?.Postcode) {
+      // @ts-expect-error - daum is loaded from external script
+      new window.daum.Postcode({
+        oncomplete: (data: {
+          address: string;
+          roadAddress: string;
+          jibunAddress: string;
+          bname: string;
+          buildingName: string;
+        }) => {
+          // 도로명 주소 우선, 없으면 지번 주소
+          const fullAddress = data.roadAddress || data.jibunAddress;
+          
+          setFormData((prev) => ({
+            ...prev,
+            location: fullAddress, // 전체 주소를 촬영장소에 입력
+            address: fullAddress,
+          }));
+          
+          toast.success("주소가 입력되었습니다");
+        },
+      }).open();
+    } else {
+      toast.error("주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+    }
+  };
 
   const handleSave = async (silent: boolean = false): Promise<DailyCallSheet | null> => {
     setIsLoading(true);
@@ -287,19 +368,10 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
 
         {/* 탭 1: 기본 정보 */}
         <TabsContent value="basic" className="space-y-8">
-          {/* 기본 정보 */}
+          {/* 1. 기본 정보 */}
           <section className="space-y-4">
             <h3 className="text-lg font-semibold border-b border-border pb-2">기본 정보</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="episode">회차/에피소드</Label>
-                <Input
-                  id="episode"
-                  value={formData.episode || ""}
-                  onChange={(e) => handleInputChange("episode", e.target.value)}
-                  placeholder="예: EP.01"
-                />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="shootingDay">촬영 회차</Label>
                 <Input
@@ -313,6 +385,15 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="episode">회차/에피소드</Label>
+                <Input
+                  id="episode"
+                  value={formData.episode || ""}
+                  onChange={(e) => handleInputChange("episode", e.target.value)}
+                  placeholder="예: EP.01"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="date">촬영 날짜</Label>
                 <Input
                   id="date"
@@ -323,15 +404,92 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
                       : dayjs(formData.date).format("YYYY-MM-DD")
                   }
                   onChange={(e) => handleInputChange("date", e.target.value)}
+                  className={highlightFields.includes("date") ? "ring-2 ring-yellow-500 animate-pulse" : ""}
                 />
               </div>
+            </div>
+          </section>
+
+          {/* 2. 촬영 장소 */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <h3 className="text-lg font-semibold">촬영 장소</h3>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={handleSearchAddress}
+                className="bg-black hover:bg-gray-800"
+              >
+                <Search className="h-4 w-4 mr-2" />
+                주소 검색
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="location">촬영장소</Label>
+                <Input
+                  id="location"
+                  value={formData.location || ""}
+                  onChange={(e) => handleInputChange("location", e.target.value)}
+                  placeholder="주소 검색 버튼을 클릭하거나 직접 입력하세요"
+                  className={highlightFields.includes("location") ? "ring-2 ring-yellow-500 animate-pulse" : ""}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="meetingPlace">집합장소</Label>
+                <Input
+                  id="meetingPlace"
+                  value={formData.meetingPlace || ""}
+                  onChange={(e) => handleInputChange("meetingPlace", e.target.value)}
+                  placeholder="촬영장소와 동일 시 비워두세요"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="parkingInfo">주차 정보</Label>
+                <Input
+                  id="parkingInfo"
+                  value={formData.parkingInfo || ""}
+                  onChange={(e) => handleInputChange("parkingInfo", e.target.value)}
+                  placeholder="주차 가능 위치 및 안내"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* 3. 날씨 정보 */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <h3 className="text-lg font-semibold">날씨 정보</h3>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={handleFetchWeather}
+                disabled={isLoadingWeather}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400"
+              >
+                {isLoadingWeather ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    가져오는 중...
+                  </>
+                ) : (
+                  <>
+                    <Cloud className="h-4 w-4 mr-2" />
+                    날씨 가져오기
+                  </>
+                )}
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="weather">날씨</Label>
                 <Input
                   id="weather"
                   value={formData.weather || ""}
                   onChange={(e) => handleInputChange("weather", e.target.value)}
-                  placeholder="맑음, 흐림 등"
+                  placeholder="맑음"
                 />
               </div>
               <div className="space-y-2">
@@ -340,7 +498,7 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
                   id="tempMin"
                   value={formData.tempMin || ""}
                   onChange={(e) => handleInputChange("tempMin", e.target.value)}
-                  placeholder="예: -5℃"
+                  placeholder="-5℃"
                 />
               </div>
               <div className="space-y-2">
@@ -349,7 +507,7 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
                   id="tempMax"
                   value={formData.tempMax || ""}
                   onChange={(e) => handleInputChange("tempMax", e.target.value)}
-                  placeholder="예: 10℃"
+                  placeholder="10℃"
                 />
               </div>
               <div className="space-y-2">
@@ -358,7 +516,7 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
                   id="precipitation"
                   value={formData.precipitation || ""}
                   onChange={(e) => handleInputChange("precipitation", e.target.value)}
-                  placeholder="예: 20%"
+                  placeholder="20%"
                 />
               </div>
               <div className="space-y-2">
@@ -377,49 +535,6 @@ export function CallSheetForm({ projectId, initialData, mode }: CallSheetFormPro
                   value={formData.sunset || ""}
                   onChange={(e) => handleInputChange("sunset", e.target.value)}
                   placeholder="18:30"
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* 촬영 장소 */}
-          <section className="space-y-4">
-            <h3 className="text-lg font-semibold border-b border-border pb-2">촬영 장소</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="location">촬영장소</Label>
-                <Input
-                  id="location"
-                  value={formData.location || ""}
-                  onChange={(e) => handleInputChange("location", e.target.value)}
-                  placeholder="촬영 장소명"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="meetingPlace">집합장소</Label>
-                <Input
-                  id="meetingPlace"
-                  value={formData.meetingPlace || ""}
-                  onChange={(e) => handleInputChange("meetingPlace", e.target.value)}
-                  placeholder="집합 장소 (촬영장소와 동일 시 비워두세요)"
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="address">주소</Label>
-                <Input
-                  id="address"
-                  value={formData.address || ""}
-                  onChange={(e) => handleInputChange("address", e.target.value)}
-                  placeholder="상세 주소"
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="parkingInfo">주차 정보</Label>
-                <Input
-                  id="parkingInfo"
-                  value={formData.parkingInfo || ""}
-                  onChange={(e) => handleInputChange("parkingInfo", e.target.value)}
-                  placeholder="주차 가능 위치 및 안내"
                 />
               </div>
             </div>
